@@ -1,0 +1,16 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node / Next.js
+node_modules/
+.next/
+.env.local
+
+# Uploads (local dev image storage)
+backend/uploads/
+
+# OS
+.DS_Store

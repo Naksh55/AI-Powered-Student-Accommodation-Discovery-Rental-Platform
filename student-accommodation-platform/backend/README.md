@@ -13,24 +13,24 @@ FastAPI + PostgreSQL/PostGIS backend.
    the project root starts a Postgres+PostGIS container — see the root
    README for that option.)
 2. Create a virtualenv and install dependencies:
-```
+   ```
    python -m venv venv
    source venv/bin/activate   # Windows: venv\Scripts\activate
    pip install -r requirements.txt
-```
+   ```
 3. Copy the env file and paste your Neon connection string into `DATABASE_URL`:
-```
+   ```
    cp .env.example .env
-```
+   ```
 4. Run the first migration:
-```
+   ```
    alembic revision --autogenerate -m "initial schema"
    alembic upgrade head
-```
+   ```
 5. Start the API:
-```
+   ```
    uvicorn app.main:app --reload
-```
+   ```
 6. Open http://localhost:8000/docs for interactive API docs.
 
 ## What's built (Weeks 1–2)

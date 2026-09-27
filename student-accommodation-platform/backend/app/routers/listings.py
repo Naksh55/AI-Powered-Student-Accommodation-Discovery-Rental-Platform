@@ -101,6 +101,27 @@ def search_listings(
     return [_serialize(listing) for listing in listings]
 
 
+@router.get("/mine", response_model=list[ListingOut])
+def list_my_listings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    The Owner dashboard's data source. Unlike the public search endpoint
+    above, this returns the owner's listings regardless of is_active /
+    is_verified state, so they can see drafts and pending-verification
+    listings too. Must be registered before /{listing_id} below, or
+    FastAPI will try (and fail) to parse "mine" as a UUID.
+    """
+    listings = (
+        db.query(Listing)
+        .filter(Listing.owner_id == current_user.id)
+        .order_by(Listing.created_at.desc())
+        .all()
+    )
+    return [_serialize(listing) for listing in listings]
+
+
 @router.get("/{listing_id}", response_model=ListingOut)
 def get_listing(listing_id: uuid.UUID, db: Session = Depends(get_db)):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()

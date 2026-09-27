@@ -40,12 +40,16 @@ export default function ListingDetailPage({
   }
 
   const roomMeta = ROOM_TYPE_META[listing.room_type];
-  const amenities = [
-    listing.has_ac ? "AC" : null,
-    listing.has_wifi ? "Wi-Fi" : null,
-    listing.food_included ? "Food included" : null,
-    ...listing.amenities,
-  ].filter((a): a is string => Boolean(a));
+  const amenities = Array.from(
+    new Set(
+      [
+        listing.has_ac ? "AC" : null,
+        listing.has_wifi ? "Wi-Fi" : null,
+        listing.food_included ? "Food included" : null,
+        ...listing.amenities,
+      ].filter((a): a is string => Boolean(a))
+    )
+  );
 
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}`;
 

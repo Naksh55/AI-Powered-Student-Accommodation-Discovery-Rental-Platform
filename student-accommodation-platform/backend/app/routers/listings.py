@@ -6,12 +6,15 @@ from geoalchemy2.functions import ST_DWithin
 from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
 
+from app.ai.query_parser import parse_natural_language_query
+from app.core.config import settings
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.amenity import Amenity
 from app.models.listing import Listing, RoomType
 from app.models.user import User, UserRole
 from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
+from app.schemas.search import NaturalLanguageSearchRequest, NaturalLanguageSearchResponse
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
@@ -60,23 +63,27 @@ def _require_owner_or_admin(user: User):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only owners can manage listings")
 
 
-@router.get("", response_model=list[ListingOut])
-def search_listings(
-    db: Session = Depends(get_db),
-    min_budget: float | None = Query(default=None, ge=0),
-    max_budget: float | None = Query(default=None, ge=0),
+def apply_listing_filters(
+    db: Session,
+    *,
+    min_budget: float | None = None,
+    max_budget: float | None = None,
     room_type: RoomType | None = None,
     has_ac: bool | None = None,
     has_wifi: bool | None = None,
     food_included: bool | None = None,
     city: str | None = None,
-    # Distance filter: pass a center point + radius. In Milestone 3, the
-    # natural-language search chain resolves a plain-text query into these
-    # same parameters before calling this endpoint.
-    lat: float | None = Query(default=None, ge=-90, le=90),
-    lng: float | None = Query(default=None, ge=-180, le=180),
-    max_distance_km: float | None = Query(default=None, gt=0),
+    lat: float | None = None,
+    lng: float | None = None,
+    max_distance_km: float | None = None,
 ):
+    """
+    Shared filter-building logic. Used by both the structured search
+    endpoint below and the natural-language search endpoint (whose
+    query-parsing chain resolves a plain-text query into these same
+    keyword arguments before calling this function) — one place to get
+    the filtering right, two ways to call it.
+    """
     query = db.query(Listing).filter(Listing.is_active.is_(True))
 
     if min_budget is not None:
@@ -97,8 +104,79 @@ def search_listings(
         center = _make_point(lat, lng)
         query = query.filter(ST_DWithin(Listing.location, center, max_distance_km * 1000))
 
-    listings = query.order_by(Listing.created_at.desc()).all()
-    return [_serialize(listing) for listing in listings]
+    return query.order_by(Listing.created_at.desc())
+
+
+@router.get("", response_model=list[ListingOut])
+def search_listings(
+    db: Session = Depends(get_db),
+    min_budget: float | None = Query(default=None, ge=0),
+    max_budget: float | None = Query(default=None, ge=0),
+    room_type: RoomType | None = None,
+    has_ac: bool | None = None,
+    has_wifi: bool | None = None,
+    food_included: bool | None = None,
+    city: str | None = None,
+    lat: float | None = Query(default=None, ge=-90, le=90),
+    lng: float | None = Query(default=None, ge=-180, le=180),
+    max_distance_km: float | None = Query(default=None, gt=0),
+):
+    query = apply_listing_filters(
+        db,
+        min_budget=min_budget,
+        max_budget=max_budget,
+        room_type=room_type,
+        has_ac=has_ac,
+        has_wifi=has_wifi,
+        food_included=food_included,
+        city=city,
+        lat=lat,
+        lng=lng,
+        max_distance_km=max_distance_km,
+    )
+    return [_serialize(listing) for listing in query.all()]
+
+
+@router.post("/search/natural", response_model=NaturalLanguageSearchResponse)
+def natural_language_search(
+    payload: NaturalLanguageSearchRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    The Milestone 3 headline feature. Takes a plain-text query like
+    "single room under 8000 with AC near Mohali", parses it into
+    structured filters with an LLM, then runs those filters through the
+    exact same apply_listing_filters() the structured search endpoint
+    uses. Distance ("within 2 km") is parsed and echoed back in
+    parsed_filters for visibility, but not yet applied as a DB filter —
+    that needs a known reference point (the student's college), which
+    isn't wired up until the college-selection feature exists.
+    """
+    if not settings.OPENAI_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Natural-language search isn't configured yet — add OPENAI_API_KEY to backend/.env",
+        )
+
+    try:
+        parsed = parse_natural_language_query(payload.query)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Couldn't understand that query: {exc}")
+
+    query = apply_listing_filters(
+        db,
+        min_budget=parsed.min_budget,
+        max_budget=parsed.max_budget,
+        room_type=parsed.room_type,
+        has_ac=parsed.has_ac,
+        has_wifi=parsed.has_wifi,
+        food_included=parsed.food_included,
+        city=parsed.city,
+    )
+    return NaturalLanguageSearchResponse(
+        parsed_filters=parsed,
+        results=[_serialize(listing) for listing in query.all()],
+    )
 
 
 @router.get("/mine", response_model=list[ListingOut])

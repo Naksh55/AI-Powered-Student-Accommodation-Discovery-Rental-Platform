@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getListings, type ListingFilters, type ListingOut } from "@/app/lib/api";
+import { getListings, type ListingFilters, type ListingOut, type ParsedSearchFilters } from "@/app/lib/api";
 import { SearchFilterForm } from "@/app/components/SearchFilterForm";
+import { NaturalLanguageSearchBox } from "@/app/components/NaturalLanguageSearchBox";
 import { ListingCard } from "@/app/components/ListingCard";
 
 export default function SearchPage() {
@@ -20,6 +21,12 @@ export default function SearchPage() {
     }
   }
 
+  function handleNaturalLanguageResults(_filters: ParsedSearchFilters | null, results: ListingOut[] | null) {
+    if (results === null) return; // an error occurred — leave current results as-is
+    setListings(results);
+    setStatus("ready");
+  }
+
   useEffect(() => {
     runSearch();
   }, []);
@@ -27,9 +34,11 @@ export default function SearchPage() {
   return (
     <main className="max-w-5xl mx-auto p-6 md:p-10">
       <h1 className="font-serif text-3xl">Find a place near your college</h1>
-      <p className="text-ink-soft mt-1 mb-8">
+      <p className="text-ink-soft mt-1 mb-6">
         Filter by budget, room type, and what matters to you.
       </p>
+
+      <NaturalLanguageSearchBox onResults={handleNaturalLanguageResults} />
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
         <SearchFilterForm onSearch={runSearch} />

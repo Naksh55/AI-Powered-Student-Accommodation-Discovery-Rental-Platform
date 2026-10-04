@@ -18,8 +18,13 @@ class Settings(BaseSettings):
     # -- CORS --
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # -- AI layer (wired up in Milestone 3, present now so config is ready) --
-    LLM_API_KEY: str = ""
+    # -- AI layer (Milestone 3): natural-language search + listing-quality
+    # analyzer, both powered by an OpenAI model through LangChain. Get a key
+    # at https://platform.openai.com/api-keys and put it in .env — nothing
+    # in this AI layer works without it, but the rest of the app is
+    # unaffected if it's left blank.
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     class Config:
         env_file = ".env"

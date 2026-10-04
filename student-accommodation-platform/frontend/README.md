@@ -2,7 +2,7 @@
 
 Next.js (App Router) + TypeScript + Tailwind.
 
-## Local setup required
+## Local setup
 
 1. Install dependencies:
    ```

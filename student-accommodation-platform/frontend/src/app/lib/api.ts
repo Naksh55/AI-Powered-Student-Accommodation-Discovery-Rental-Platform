@@ -171,4 +171,29 @@ export function uploadListingImage(listingId: string, file: File): Promise<{ id:
   });
 }
 
+// -- Natural-language search (Milestone 3) --
+
+export type ParsedSearchFilters = {
+  min_budget: number | null;
+  max_budget: number | null;
+  room_type: ListingOut["room_type"] | null;
+  has_ac: boolean | null;
+  has_wifi: boolean | null;
+  food_included: boolean | null;
+  city: string | null;
+  max_distance_km: number | null;
+};
+
+export type NaturalLanguageSearchResult = {
+  parsed_filters: ParsedSearchFilters;
+  results: ListingOut[];
+};
+
+export function naturalLanguageSearch(query: string): Promise<NaturalLanguageSearchResult> {
+  return apiFetch<NaturalLanguageSearchResult>("/listings/search/natural", {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
+
 export { ApiError };

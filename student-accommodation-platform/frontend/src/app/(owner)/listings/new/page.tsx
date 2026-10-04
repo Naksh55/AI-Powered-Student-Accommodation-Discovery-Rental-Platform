@@ -39,10 +39,13 @@ export default function NewListingPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // Kept in sync with the flag-derived labels on the listing detail
+      // page (Wi-Fi / Food included) so the same amenity never shows up
+      // twice under two slightly different spellings.
       const amenity_names = [
         hasAc ? "AC" : null,
-        hasWifi ? "WiFi" : null,
-        foodIncluded ? "Food Included" : null,
+        hasWifi ? "Wi-Fi" : null,
+        foodIncluded ? "Food included" : null,
       ].filter((a): a is string => a !== null);
 
       const listing = await createListing({

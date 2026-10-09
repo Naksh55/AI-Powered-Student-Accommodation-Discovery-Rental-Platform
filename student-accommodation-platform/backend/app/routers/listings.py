@@ -5,6 +5,7 @@ from geoalchemy2 import WKTElement
 from geoalchemy2.functions import ST_DWithin
 from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.ai.query_parser import parse_natural_language_query
 from app.core.config import settings
@@ -99,7 +100,17 @@ def apply_listing_filters(
     if food_included is not None:
         query = query.filter(Listing.food_included.is_(food_included))
     if city is not None:
-        query = query.filter(Listing.city.ilike(f"%{city}%"))
+        tokens = [t for t in city.split() if len(t) > 2]
+        if tokens:
+            query = query.filter(
+                or_(
+                    *[
+                        col.ilike(f"%{t}%")
+                        for t in tokens
+                        for col in (Listing.city, Listing.address_line, Listing.title)
+                    ]
+                )
+            )
     if lat is not None and lng is not None and max_distance_km is not None:
         center = _make_point(lat, lng)
         query = query.filter(ST_DWithin(Listing.location, center, max_distance_km * 1000))
@@ -152,10 +163,10 @@ def natural_language_search(
     that needs a known reference point (the student's college), which
     isn't wired up until the college-selection feature exists.
     """
-    if not settings.OPENAI_API_KEY:
+    if not settings.GROQ_API_KEY:
         raise HTTPException(
             status_code=503,
-            detail="Natural-language search isn't configured yet — add OPENAI_API_KEY to backend/.env",
+            detail="Natural-language search isn't configured yet — add GROQ_API_KEY to backend/.env",
         )
 
     try:

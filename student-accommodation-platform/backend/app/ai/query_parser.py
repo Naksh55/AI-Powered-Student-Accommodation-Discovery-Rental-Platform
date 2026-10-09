@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
@@ -57,21 +57,21 @@ _structured_llm = None
 def _get_structured_llm():
     """
     Lazily built so importing this module — and therefore starting the
-    app — never requires OPENAI_API_KEY to be set. The key is only
+    app — never requires GROQ_API_KEY to be set. The key is only
     actually needed the first time someone calls the natural-language
     search endpoint.
     """
     global _structured_llm
     if _structured_llm is None:
-        if not settings.OPENAI_API_KEY:
+        if not settings.GROQ_API_KEY:
             raise RuntimeError(
-                "OPENAI_API_KEY is not set in .env — natural-language search "
+                "GROQ_API_KEY is not set in .env — natural-language search "
                 "is disabled until it is. Structured search still works "
                 "without it."
             )
-        llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
+        llm = ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
             temperature=0,
         )
         _structured_llm = llm.with_structured_output(ParsedSearchFilters)

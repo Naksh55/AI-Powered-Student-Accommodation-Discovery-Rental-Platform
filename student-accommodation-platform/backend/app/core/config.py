@@ -18,17 +18,14 @@ class Settings(BaseSettings):
     # -- CORS --
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # -- AI layer (Milestone 3): natural-language search + listing-quality
-    # analyzer, both powered by an OpenAI model through LangChain. Get a key
-    # at https://platform.openai.com/api-keys and put it in .env — nothing
-    # in this AI layer works without it, but the rest of the app is
-    # unaffected if it's left blank.
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    # -- AI layer: natural-language search via Groq's free API tier.
+    # Get a key at https://console.groq.com/keys and put it in .env.
+    # The rest of the app remains available when the key is left blank.
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()

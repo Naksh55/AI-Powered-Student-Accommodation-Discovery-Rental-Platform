@@ -22,6 +22,9 @@ FastAPI + PostgreSQL/PostGIS backend.
    ```
    cp .env.example .env
    ```
+   Add a free Groq API key to `GROQ_API_KEY` in `.env` to enable natural-language
+   search. Create a key at [console.groq.com/keys](https://console.groq.com/keys);
+   the free tier is subject to Groq's usage limits.
 4. Run the first migration:
    ```
    alembic revision --autogenerate -m "initial schema"

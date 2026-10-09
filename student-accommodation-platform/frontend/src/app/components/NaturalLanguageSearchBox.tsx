@@ -75,7 +75,7 @@ export function NaturalLanguageSearchBox({
 
       {state === "unconfigured" && (
         <p className="text-sm text-brick mt-3">
-          Natural-language search isn&apos;t set up yet — add an OPENAI_API_KEY
+          Natural-language search isn&apos;t set up yet — add a GROQ_API_KEY
           to backend/.env to enable it. The filters below still work.
         </p>
       )}

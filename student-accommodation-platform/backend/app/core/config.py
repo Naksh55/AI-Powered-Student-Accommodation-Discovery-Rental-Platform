@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     # -- AI layer: natural-language search via Groq's free API tier.
     # Get a key at https://console.groq.com/keys and put it in .env.
     # The rest of the app remains available when the key is left blank.
-
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

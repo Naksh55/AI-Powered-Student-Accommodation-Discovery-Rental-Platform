@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ListingFilters } from "@/app/lib/api";
+import type { College, ListingFilters } from "@/app/lib/api";
 
 const ROOM_TYPE_OPTIONS: { value: ListingFilters["room_type"]; label: string }[] = [
   { value: undefined, label: "Any room type" },
@@ -11,10 +11,23 @@ const ROOM_TYPE_OPTIONS: { value: ListingFilters["room_type"]; label: string }[]
   { value: "flat", label: "Full flat" },
 ];
 
+const DISTANCE_OPTIONS_KM = [1, 2, 3, 5];
+
+const FIELD =
+  "w-full border-2 border-line px-3 py-2 bg-paper focus:outline-none focus:border-brand";
+
 export function SearchFilterForm({
   onSearch,
+  colleges,
+  collegeId,
+  onCollegeChange,
 }: {
   onSearch: (filters: ListingFilters) => void;
+  colleges: College[];
+  // Owned by the search page so the natural-language box can use the same
+  // college. "" means no college selected.
+  collegeId: string;
+  onCollegeChange: (id: string) => void;
 }) {
   const [maxBudget, setMaxBudget] = useState("");
   const [roomType, setRoomType] = useState<ListingFilters["room_type"]>(undefined);
@@ -22,6 +35,7 @@ export function SearchFilterForm({
   const [hasWifi, setHasWifi] = useState(false);
   const [foodIncluded, setFoodIncluded] = useState(false);
   const [city, setCity] = useState("");
+  const [distanceKm, setDistanceKm] = useState(3);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +46,10 @@ export function SearchFilterForm({
       has_wifi: hasWifi || undefined,
       food_included: foodIncluded || undefined,
       city: city || undefined,
+      // The backend turns college_id into coordinates, so only the id and
+      // the radius travel from here.
+      college_id: collegeId || undefined,
+      max_distance_km: collegeId ? distanceKm : undefined,
     });
   }
 
@@ -40,6 +58,50 @@ export function SearchFilterForm({
       onSubmit={handleSubmit}
       className="bg-paper-raised border border-line-soft p-5 flex flex-col gap-4"
     >
+      <div>
+        <label className="block text-sm text-ink-soft mb-1" htmlFor="college">
+          Near my college
+        </label>
+        <select
+          id="college"
+          value={collegeId}
+          onChange={(e) => onCollegeChange(e.target.value)}
+          className={FIELD}
+        >
+          <option value="">Anywhere</option>
+          {colleges.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {colleges.length === 0 && (
+          <p className="text-xs text-ink-soft mt-1">
+            No colleges loaded yet. Run the seed script on the backend.
+          </p>
+        )}
+      </div>
+
+      {collegeId && (
+        <div>
+          <label className="block text-sm text-ink-soft mb-1" htmlFor="distance">
+            Within
+          </label>
+          <select
+            id="distance"
+            value={distanceKm}
+            onChange={(e) => setDistanceKm(Number(e.target.value))}
+            className={FIELD}
+          >
+            {DISTANCE_OPTIONS_KM.map((km) => (
+              <option key={km} value={km}>
+                {km} km
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm text-ink-soft mb-1" htmlFor="city">
           City or area
@@ -50,7 +112,7 @@ export function SearchFilterForm({
           value={city}
           onChange={(e) => setCity(e.target.value)}
           placeholder="e.g. Mohali"
-          className="w-full border-2 border-line px-3 py-2 bg-paper focus:outline-none focus:border-brand"
+          className={FIELD}
         />
       </div>
 
@@ -65,7 +127,7 @@ export function SearchFilterForm({
           value={maxBudget}
           onChange={(e) => setMaxBudget(e.target.value)}
           placeholder="8000"
-          className="w-full border-2 border-line px-3 py-2 bg-paper focus:outline-none focus:border-brand"
+          className={FIELD}
         />
       </div>
 
@@ -77,11 +139,9 @@ export function SearchFilterForm({
           id="room-type"
           value={roomType ?? ""}
           onChange={(e) =>
-            setRoomType(
-              (e.target.value || undefined) as ListingFilters["room_type"]
-            )
+            setRoomType((e.target.value || undefined) as ListingFilters["room_type"])
           }
-          className="w-full border-2 border-line px-3 py-2 bg-paper focus:outline-none focus:border-brand"
+          className={FIELD}
         >
           {ROOM_TYPE_OPTIONS.map((opt) => (
             <option key={opt.label} value={opt.value ?? ""}>

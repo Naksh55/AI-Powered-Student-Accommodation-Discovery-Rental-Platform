@@ -16,6 +16,13 @@ from app.models.listing import Listing, RoomType
 from app.models.user import User, UserRole
 from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
 from app.schemas.search import NaturalLanguageSearchRequest, NaturalLanguageSearchResponse
+from app.services.colleges import (
+    DEFAULT_RADIUS_KM,
+    city_mentions_college,
+    college_latlng,
+    find_college,
+    serialize_college,
+)
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
@@ -131,7 +138,17 @@ def search_listings(
     lat: float | None = Query(default=None, ge=-90, le=90),
     lng: float | None = Query(default=None, ge=-180, le=180),
     max_distance_km: float | None = Query(default=None, gt=0),
+    college_id: uuid.UUID | None = None,
 ):
+    # "Near my college": resolve the chosen college to coordinates
+    # server-side, so the frontend never has to know them.
+    if college_id is not None and lat is None and lng is None:
+        college = find_college(db, college_id, None).college
+        if college is None:
+            raise HTTPException(status_code=404, detail="College not found")
+        lat, lng = college_latlng(college)
+        max_distance_km = max_distance_km or DEFAULT_RADIUS_KM
+
     query = apply_listing_filters(
         db,
         min_budget=min_budget,
@@ -158,10 +175,8 @@ def natural_language_search(
     "single room under 8000 with AC near Mohali", parses it into
     structured filters with an LLM, then runs those filters through the
     exact same apply_listing_filters() the structured search endpoint
-    uses. Distance ("within 2 km") is parsed and echoed back in
-    parsed_filters for visibility, but not yet applied as a DB filter —
-    that needs a known reference point (the student's college), which
-    isn't wired up until the college-selection feature exists.
+    uses. Distance ("within 2 km", or just "near cgc landran") is applied
+    as a PostGIS radius search around a college — see find_college().
     """
     if not settings.GROQ_API_KEY:
         raise HTTPException(
@@ -171,8 +186,37 @@ def natural_language_search(
 
     try:
         parsed = parse_natural_language_query(payload.query)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Couldn't understand that query: {exc}")
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"LLM error: {e}")
+    print("PARSED:", parsed, "| COLLEGE_ID:", payload.college_id)   # <-- add here
+
+    # A distance filter needs a reference point. It comes from a college
+    # named in the query ("near cgc landran") or the one picked in the
+    # selector. We apply it when the query asked for a distance, or when a
+    # college was named outright ("near X" with no figure -> default radius).
+    resolution = find_college(db, payload.college_id, payload.query)
+    college = resolution.college
+    wants_distance = (
+        parsed.max_distance_km is not None
+        or resolution.named_in_query
+        or parsed.use_my_college
+    )
+    use_distance = college is not None and wants_distance
+
+    hint = None
+    if wants_distance and college is None:
+        hint = "Pick your college in the 'Near my college' menu to filter by distance."
+
+    lat = lng = radius_km = None
+    city = parsed.city
+    if use_distance:
+        lat, lng = college_latlng(college)
+        radius_km = parsed.max_distance_km or DEFAULT_RADIUS_KM
+        # The LLM often files "cgc landran" under city; the radius search
+        # already covers it, and as a text filter it would match nothing.
+        if city and city_mentions_college(city, college):
+            city = None
 
     query = apply_listing_filters(
         db,
@@ -182,10 +226,16 @@ def natural_language_search(
         has_ac=parsed.has_ac,
         has_wifi=parsed.has_wifi,
         food_included=parsed.food_included,
-        city=parsed.city,
+        city=city,
+        lat=lat,
+        lng=lng,
+        max_distance_km=radius_km,
     )
     return NaturalLanguageSearchResponse(
         parsed_filters=parsed,
+        college=serialize_college(college) if use_distance else None,
+        applied_radius_km=radius_km,
+        hint=hint,
         results=[_serialize(listing) for listing in query.all()],
     )
 

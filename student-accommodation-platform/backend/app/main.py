@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.routers import auth, images, listings, users
+from app.routers import auth, colleges, images, listings, users
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(colleges.router, prefix=settings.API_V1_PREFIX)
 app.include_router(users.router, prefix=settings.API_V1_PREFIX)
 app.include_router(listings.router, prefix=settings.API_V1_PREFIX)
 app.include_router(images.router, prefix=settings.API_V1_PREFIX)

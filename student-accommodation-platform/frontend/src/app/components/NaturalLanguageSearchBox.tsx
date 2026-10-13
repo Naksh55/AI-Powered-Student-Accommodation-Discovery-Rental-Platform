@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, naturalLanguageSearch, type ListingOut, type ParsedSearchFilters } from "@/app/lib/api";
+import {
+  ApiError,
+  naturalLanguageSearch,
+  type ListingOut,
+  type NaturalLanguageSearchResult,
+} from "@/app/lib/api";
 import { ROOM_TYPE_META } from "@/app/lib/room-type";
 
-function describeFilters(f: ParsedSearchFilters): string[] {
+function describe(result: NaturalLanguageSearchResult): string[] {
+  const f = result.parsed_filters;
   const parts: string[] = [];
   if (f.room_type) parts.push(ROOM_TYPE_META[f.room_type].label);
   if (f.max_budget && f.min_budget) {
@@ -17,37 +23,43 @@ function describeFilters(f: ParsedSearchFilters): string[] {
   if (f.has_ac) parts.push("AC");
   if (f.has_wifi) parts.push("Wi-Fi");
   if (f.food_included) parts.push("food included");
-  if (f.city) parts.push(`in ${f.city}`);
-  if (f.max_distance_km) {
-    parts.push(`within ${f.max_distance_km} km (not yet applied — see note below)`);
+
+  // Show the distance only if it was really applied, and say what it was
+  // measured from, so a wrong guess about the college is visible.
+  if (result.college && result.applied_radius_km) {
+    parts.push(`within ${result.applied_radius_km} km of ${result.college.name}`);
+  } else if (f.max_distance_km) {
+    parts.push(`within ${f.max_distance_km} km (choose your college to apply this)`);
   }
+
+  // When a college was matched, the city is covered by the radius search.
+  if (f.city && !result.college) parts.push(`in ${f.city}`);
   return parts;
 }
 
 export function NaturalLanguageSearchBox({
+  collegeId,
   onResults,
 }: {
-  // Reports both what the AI understood and the matching listings in one
-  // call, so the parent search page can swap its results list and show
-  // the "searching for..." confirmation in sync. null/null clears both.
-  onResults: (filters: ParsedSearchFilters | null, results: ListingOut[] | null) => void;
+  collegeId: string;
+  onResults: (results: ListingOut[] | null) => void;
 }) {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "unconfigured" | "error">("idle");
-  const [understood, setUnderstood] = useState<ParsedSearchFilters | null>(null);
+  const [understood, setUnderstood] = useState<NaturalLanguageSearchResult | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim()) return;
     setState("loading");
     try {
-      const result = await naturalLanguageSearch(query);
-      setUnderstood(result.parsed_filters);
+      const result = await naturalLanguageSearch(query, collegeId || null);
+      setUnderstood(result);
       setState("done");
-      onResults(result.parsed_filters, result.results);
+      onResults(result.results);
     } catch (err) {
       setState(err instanceof ApiError && err.status === 503 ? "unconfigured" : "error");
-      onResults(null, null);
+      onResults(null);
     }
   }
 
@@ -61,7 +73,7 @@ export function NaturalLanguageSearchBox({
           id="nl-query"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Single room under ₹8,000 with AC and Wi-Fi"
+          placeholder="Single room under ₹8,000 near CGC Landran with AC"
           className="flex-1 border-2 border-line px-3 py-2 bg-paper focus:outline-none focus:border-brand"
         />
         <button
@@ -75,8 +87,8 @@ export function NaturalLanguageSearchBox({
 
       {state === "unconfigured" && (
         <p className="text-sm text-brick mt-3">
-          Natural-language search isn&apos;t set up yet — add a GROQ_API_KEY
-          to backend/.env to enable it. The filters below still work.
+          Natural-language search isn&apos;t set up yet. Add your LLM API key to
+          backend/.env to enable it. The filters below still work.
         </p>
       )}
 
@@ -90,7 +102,7 @@ export function NaturalLanguageSearchBox({
         <p className="text-sm text-ink-soft mt-3">
           Searching for:{" "}
           <span className="text-ink font-medium">
-            {describeFilters(understood).join(", ") || "no specific filters understood"}
+            {describe(understood).join(", ") || "no specific filters understood"}
           </span>
         </p>
       )}

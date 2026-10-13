@@ -34,6 +34,8 @@ export type ListingFilters = {
   lat?: number;
   lng?: number;
   max_distance_km?: number;
+  // "Near my college": the backend resolves this to coordinates itself.
+  college_id?: string;
 };
 
 export type ListingCreateInput = {
@@ -171,6 +173,20 @@ export function uploadListingImage(listingId: string, file: File): Promise<{ id:
   });
 }
 
+// -- Colleges --
+
+export type College = {
+  id: string;
+  name: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+};
+
+export function getColleges(): Promise<College[]> {
+  return apiFetch<College[]>("/colleges");
+}
+
 // -- Natural-language search (Milestone 3) --
 
 export type ParsedSearchFilters = {
@@ -186,13 +202,19 @@ export type ParsedSearchFilters = {
 
 export type NaturalLanguageSearchResult = {
   parsed_filters: ParsedSearchFilters;
+  // Set only when a distance filter was really applied.
+  college: College | null;
+  applied_radius_km: number | null;
   results: ListingOut[];
 };
 
-export function naturalLanguageSearch(query: string): Promise<NaturalLanguageSearchResult> {
+export function naturalLanguageSearch(
+  query: string,
+  collegeId?: string | null
+): Promise<NaturalLanguageSearchResult> {
   return apiFetch<NaturalLanguageSearchResult>("/listings/search/natural", {
     method: "POST",
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, college_id: collegeId ?? null }),
   });
 }
 

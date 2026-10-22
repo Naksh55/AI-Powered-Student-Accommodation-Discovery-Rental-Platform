@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ListingOut } from "@/app/lib/api";
 import { ROOM_TYPE_META } from "@/app/lib/room-type";
 import { PriceTag } from "./PriceTag";
+import { imageSrc } from "@/app/lib/media";
 import { AmenityChip } from "./AmenityChip";
 
 export function ListingCard({ listing }: { listing: ListingOut }) {
@@ -22,7 +23,7 @@ export function ListingCard({ listing }: { listing: ListingOut }) {
         {listing.image_urls[0] ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={listing.image_urls[0]}
+            src={imageSrc(listing.image_urls[0])}
             alt={listing.title}
             className="w-full h-full object-cover"
           />

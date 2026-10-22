@@ -7,12 +7,16 @@ import { useAuth } from "@/app/lib/auth-context";
 import { getMyListings, deleteListing, type ListingOut } from "@/app/lib/api";
 import { ROOM_TYPE_META } from "@/app/lib/room-type";
 import { PriceTag } from "@/app/components/PriceTag";
+import { ListingQualityPanel } from "@/app/components/ListingQualityPanel";
+import { AddPhotosButton } from "@/app/components/AddPhotosButton";
 
 export default function OwnerDashboardPage() {
   const { user, status } = useAuth();
   const router = useRouter();
   const [listings, setListings] = useState<ListingOut[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  // Which listing has its quality-check panel open (one at a time).
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
   // Auth guard: redirect anyone who isn't a signed-in owner. We wait for
   // "signed-out" specifically (not just "not signed-in") so we don't bounce
@@ -34,6 +38,16 @@ export default function OwnerDashboardPage() {
       })
       .catch(() => setLoadState("error"));
   }, [status, user]);
+
+  // Re-read the owner's listings (used after photos are added, so the photo
+  // count on each row updates).
+  async function reload() {
+    try {
+      setListings(await getMyListings());
+    } catch {
+      /* keep showing what we have */
+    }
+  }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this listing? This can't be undone.")) return;
@@ -83,34 +97,58 @@ export default function OwnerDashboardPage() {
           {listings.map((listing) => {
             const roomMeta = ROOM_TYPE_META[listing.room_type];
             return (
+              <div key={listing.id}>
               <div
-                key={listing.id}
-                className="flex items-center justify-between gap-4 bg-paper-raised border border-line-soft p-4"
+                className="bg-paper-raised border border-line-soft p-4"
                 style={{ borderLeftWidth: "4px", borderLeftColor: roomMeta.edgeColor }}
               >
-                <div className="min-w-0">
-                  <p className="text-xs text-ink-soft">
-                    {roomMeta.label}
-                    {!listing.is_verified && " · Pending verification"}
-                  </p>
-                  <h3 className="font-serif text-lg truncate">{listing.title}</h3>
-                  <p className="text-sm text-ink-soft">{listing.city}</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs text-ink-soft">
+                      {roomMeta.label}
+                      {!listing.is_verified && " · Pending verification"}
+                    </p>
+                    <h3 className="font-serif text-lg truncate">{listing.title}</h3>
+                    <p className="text-sm text-ink-soft">
+                      {listing.city} ·{" "}
+                      {listing.image_urls.length === 0 ? (
+                        <span className="text-brick">No photos yet</span>
+                      ) : (
+                        `${listing.image_urls.length} photo${listing.image_urls.length === 1 ? "" : "s"}`
+                      )}
+                    </p>
+                  </div>
                   <PriceTag amount={listing.monthly_rent} />
-                  <Link
-                    href={`/listing/${listing.id}`}
-                    className="text-sm text-brand underline"
-                  >
+                </div>
+                <div className="flex flex-wrap items-start gap-x-5 gap-y-2 mt-3 pt-3 border-t border-line-soft">
+                  <Link href={`/listing/${listing.id}`} className="text-sm text-brand underline">
                     View
                   </Link>
                   <button
+                    onClick={() => setCheckingId(checkingId === listing.id ? null : listing.id)}
+                    className="text-sm text-brand underline"
+                  >
+                    {checkingId === listing.id ? "Hide check" : "Check quality"}
+                  </button>
+                  <AddPhotosButton listingId={listing.id} onUploaded={reload} />
+                  <button
                     onClick={() => handleDelete(listing.id)}
-                    className="text-sm text-brick underline"
+                    className="text-sm text-brick underline ml-auto"
                   >
                     Delete
                   </button>
                 </div>
+              </div>
+              {checkingId === listing.id && (
+                <ListingQualityPanel
+                  listingId={listing.id}
+                  onDescriptionSaved={(description) =>
+                    setListings((prev) =>
+                      prev.map((l) => (l.id === listing.id ? { ...l, description } : l))
+                    )
+                  }
+                />
+              )}
               </div>
             );
           })}

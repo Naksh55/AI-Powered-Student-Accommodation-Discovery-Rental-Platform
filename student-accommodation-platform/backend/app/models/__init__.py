@@ -3,3 +3,4 @@ from app.models.college import College  # noqa: F401
 from app.models.image import ListingImage  # noqa: F401
 from app.models.listing import Listing, RoomType  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
+from app.models.inquiry import Inquiry  # noqa: F401

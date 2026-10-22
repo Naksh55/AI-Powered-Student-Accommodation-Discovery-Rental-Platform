@@ -19,8 +19,19 @@ export function SiteHeader() {
           </Link>
 
           {status === "signed-in" && user?.role === "owner" && (
-            <Link href="/dashboard" className="hover:underline">
-              My listings
+            <>
+              <Link href="/dashboard" className="hover:underline">
+                My listings
+              </Link>
+              <Link href="/inquiries" className="hover:underline">
+                Inquiries
+              </Link>
+            </>
+          )}
+
+          {status === "signed-in" && user?.role === "student" && (
+            <Link href="/my-inquiries" className="hover:underline">
+              My inquiries
             </Link>
           )}
 

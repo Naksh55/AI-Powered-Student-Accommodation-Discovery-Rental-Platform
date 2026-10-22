@@ -3,8 +3,10 @@
 import { useEffect, useState, use } from "react";
 import { getListing, type ListingOut } from "@/app/lib/api";
 import { ROOM_TYPE_META } from "@/app/lib/room-type";
+import { imageSrc } from "@/app/lib/media";
 import { PriceTag } from "@/app/components/PriceTag";
 import { AmenityChip } from "@/app/components/AmenityChip";
+import { InquiryForm } from "@/app/components/InquiryForm";
 
 export default function ListingDetailPage({
   params,
@@ -61,7 +63,7 @@ export default function ListingDetailPage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={url}
-              src={url}
+              src={imageSrc(url)}
               alt={listing.title}
               className="h-64 w-auto object-cover shrink-0 border border-line-soft"
             />
@@ -113,15 +115,7 @@ export default function ListingDetailPage({
         Open location in Google Maps
       </a>
 
-      <div className="border-t border-line-soft pt-6">
-        <button
-          disabled
-          className="bg-line text-ink-soft px-4 py-2.5 font-medium cursor-not-allowed"
-          title="Chat and inquiries are built in Milestone 3"
-        >
-          Message owner (coming soon)
-        </button>
-      </div>
+      <InquiryForm listing={listing} />
     </main>
   );
 }

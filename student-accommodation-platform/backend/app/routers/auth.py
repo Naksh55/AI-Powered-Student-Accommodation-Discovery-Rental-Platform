@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -11,6 +11,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+    # Anyone could otherwise sign up as an admin. Use scripts/make_admin.py instead.
+    if payload.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin accounts can't be created through signup")
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists")

@@ -22,6 +22,7 @@ class ListingOut(BaseModel):
     latitude: float
     longitude: float
     is_verified: bool
+    is_active: bool
     amenities: list[str] = []
     image_urls: list[str] = []
 

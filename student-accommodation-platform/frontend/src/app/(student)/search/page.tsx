@@ -47,6 +47,16 @@ export default function SearchPage() {
     }
   }
 
+  // A student added their own college: put it in the list and select it.
+  function handleCollegeAdded(college: College) {
+    setColleges((prev) =>
+      prev.some((c) => c.id === college.id)
+        ? prev
+        : [...prev, college].sort((a, b) => a.name.localeCompare(b.name))
+    );
+    handleCollegeChange(college.id);
+  }
+
   useEffect(() => {
     runSearch();
     getColleges()
@@ -77,6 +87,7 @@ export default function SearchPage() {
           colleges={colleges}
           collegeId={collegeId}
           onCollegeChange={handleCollegeChange}
+          onCollegeAdded={handleCollegeAdded}
         />
 
         <div className="flex flex-col gap-4">

@@ -49,6 +49,7 @@ def _serialize(listing: Listing) -> ListingOut:
         latitude=point.y,
         longitude=point.x,
         is_verified=listing.is_verified,
+        is_active=listing.is_active,
         amenities=[a.name for a in listing.amenities],
         image_urls=[img.url for img in listing.images],
     )

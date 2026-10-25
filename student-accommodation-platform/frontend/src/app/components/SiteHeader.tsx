@@ -29,6 +29,12 @@ export function SiteHeader() {
             </>
           )}
 
+          {status === "signed-in" && user?.role === "admin" && (
+            <Link href="/verify" className="hover:underline">
+              Verify listings
+            </Link>
+          )}
+
           {status === "signed-in" && user?.role === "student" && (
             <Link href="/my-inquiries" className="hover:underline">
               My inquiries

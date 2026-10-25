@@ -19,6 +19,7 @@ export type ListingOut = {
   latitude: number;
   longitude: number;
   is_verified: boolean;
+  is_active: boolean;
   amenities: string[];
   image_urls: string[];
 };

@@ -11,6 +11,8 @@ import re
 import uuid
 from dataclasses import dataclass
 
+from geoalchemy2 import WKTElement
+from geoalchemy2.functions import ST_DWithin
 from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
 
@@ -105,3 +107,35 @@ def find_college(
 
     selected = db.get(College, selected_id) if selected_id else None
     return CollegeResolution(selected, False)
+
+
+# A college added within this distance of an existing one is treated as the
+# same place, so two students searching for the same campus (and getting
+# slightly different map points) don't create duplicate dropdown entries.
+DUPLICATE_RADIUS_M = 400
+
+_ACRONYM_SKIP = {"of", "the", "and", "for", "in", "at"}
+
+
+def with_acronym(name: str) -> str:
+    """
+    Appends an abbreviation, e.g. "Lovely Professional University" ->
+    "Lovely Professional University (LPU)". The matcher in match_college()
+    only knows the words in a college's name, so without this a student who
+    types "near lpu" would never match a college that was added by its full
+    name.
+    """
+    if "(" in name:  # already carries one
+        return name
+    words = re.findall(r"[A-Za-z]+", name)
+    if any(w.isupper() and len(w) >= 2 for w in words):  # e.g. "GNA University", "NIT Jalandhar"
+        return name
+    initials = [w[0].upper() for w in words if len(w) > 1 and w.lower() not in _ACRONYM_SKIP]
+    if not 2 <= len(initials) <= 6:
+        return name
+    return f"{name} ({''.join(initials)})"
+
+
+def find_nearby_college(db: Session, latitude: float, longitude: float) -> College | None:
+    point = WKTElement(f"POINT({longitude} {latitude})", srid=4326)
+    return db.query(College).filter(ST_DWithin(College.location, point, DUPLICATE_RADIUS_M)).first()

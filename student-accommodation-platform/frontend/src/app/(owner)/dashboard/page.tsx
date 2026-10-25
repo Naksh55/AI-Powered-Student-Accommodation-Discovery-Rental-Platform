@@ -105,8 +105,12 @@ export default function OwnerDashboardPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-xs text-ink-soft">
-                      {roomMeta.label}
-                      {!listing.is_verified && " · Pending verification"}
+                      {roomMeta.label} ·{" "}
+                      {!listing.is_active
+                        ? "Hidden by admin"
+                        : listing.is_verified
+                          ? "Verified"
+                          : "Pending verification"}
                     </p>
                     <h3 className="font-serif text-lg truncate">{listing.title}</h3>
                     <p className="text-sm text-ink-soft">

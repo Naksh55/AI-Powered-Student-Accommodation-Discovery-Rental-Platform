@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { College, ListingFilters } from "@/app/lib/api";
+import { AddCollegePanel } from "@/app/components/AddCollegePanel";
 
 const ROOM_TYPE_OPTIONS: { value: ListingFilters["room_type"]; label: string }[] = [
   { value: undefined, label: "Any room type" },
@@ -21,6 +22,7 @@ export function SearchFilterForm({
   colleges,
   collegeId,
   onCollegeChange,
+  onCollegeAdded,
 }: {
   onSearch: (filters: ListingFilters) => void;
   colleges: College[];
@@ -28,6 +30,8 @@ export function SearchFilterForm({
   // college. "" means no college selected.
   collegeId: string;
   onCollegeChange: (id: string) => void;
+  // Called when the student adds a college that wasn't in the list.
+  onCollegeAdded: (college: College) => void;
 }) {
   const [maxBudget, setMaxBudget] = useState("");
   const [roomType, setRoomType] = useState<ListingFilters["room_type"]>(undefined);
@@ -76,11 +80,11 @@ export function SearchFilterForm({
           ))}
         </select>
         {colleges.length === 0 && (
-          <p className="text-xs text-ink-soft mt-1">
-            No colleges loaded yet. Run the seed script on the backend.
-          </p>
+          <p className="text-xs text-ink-soft mt-1">No colleges loaded yet. Add yours below.</p>
         )}
       </div>
+
+      <AddCollegePanel onAdded={onCollegeAdded} />
 
       {collegeId && (
         <div>
